@@ -16,7 +16,7 @@ I turned the laptop into a server with Proxmox and ran three machines on it: the
 
 > **Note:** For this project i was using my real name, in this documentation my name is intentionally not disclosed for operational security reasons.
 
-![The lab running on my laptop](proxmoxinstalling.JPG)
+![The lab running on my laptop](Screenshot%202026-06-07%20183628.png)
 
 I tested three types of detection:
 
