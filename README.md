@@ -14,6 +14,7 @@ I built a SIEM from scratch on an old laptop. SIEM stands for Security Informati
 I turned the laptop into a server with Proxmox and ran three machines on it: the SIEM, a victim (Debian), and an attacker (Kali Linux).
 
 I didn't just want to install a tool, i also wanted to see the full picture. Like how an attack creates events, how those events travel to the SIEM, how the SIEM turns them into alerts, and how you read those alerts.
+**note:** My name is intentionally not disclosed for operational security reasons.
 
 ![The lab running on my laptop](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20183628.png)
 
