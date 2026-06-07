@@ -14,7 +14,6 @@ I built a SIEM from scratch on an old laptop. SIEM stands for Security Informati
 I turned the laptop into a server with Proxmox and ran three machines on it: the SIEM, a victim (Debian), and an attacker (Kali Linux).
 
 
-> **Note:** For this project i was using my real name, in this documentation my name is intentionally not disclosed for operational security reasons.
 
 ![The lab running on my laptop](images/Screenshot%202026-06-07%20183628.png)
 
