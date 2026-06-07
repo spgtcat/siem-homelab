@@ -14,7 +14,9 @@ I built a full SIEM environment from scratch. SIEM means Security Information an
 The lab runs on an old laptop. I turned it into a server with Proxmox. On that server I run three machines: the SIEM, a victim, and an attacker.
 
 My goal was not just to install a tool. I wanted to understand the full path of an attack. How an attack makes events. How those events go from the victim to the SIEM. How the SIEM turns events into alerts. And how a SOC analyst reads those alerts.
+
 ![image alt](https://github.com/spgtcat/siem-homelab/blob/96bd44a532e208600d7c77a4628f247294689f51/Screenshot%202026-06-07%20183628.png)
+
 I tested three types of detection in one attack story:
 
 1. **Log-based detection** — SSH brute force
