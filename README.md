@@ -1,6 +1,6 @@
 # SIEM Homelab — Cyber Attack Simulation & Log Analysis (SOC Lab)
 
-**Author:** Emran  
+**Author:** spgtcat  
 **Project type:** Self-built home lab / Blue Team security project  
 **Stack:** Proxmox VE · Wazuh 4.14 (Indexer / Manager / Dashboard) · Kali Linux · Debian  
 **Focus:** Detection, log analysis, and attack simulation in a closed lab
@@ -15,7 +15,7 @@ I turned the laptop into a server with Proxmox and ran three machines on it: the
 
 I didn't just want to install a tool, i also wanted to see the full picture. Like how an attack creates events, how those events travel to the SIEM, how the SIEM turns them into alerts, and how you read those alerts.
 
-> **Note:** My name is intentionally not disclosed for operational security reasons.
+> **Note:** For this project i was using my real name, in this documentation my name is intentionally not disclosed for operational security reasons.
 
 ![The lab running on my laptop](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20183628.png)
 
@@ -136,7 +136,7 @@ All attacks go from Kali (`192.168.2.88`) to the Debian victim (`192.168.2.87`).
 
 **Attack (from Kali):**
 ```bash
-hydra -l emran -P /tmp/passwords.txt ssh://192.168.2.87 -t 4 -V
+hydra -l **** -P /tmp/passwords.txt ssh://192.168.2.87 -t 4 -V
 ```
 Hydra tries a bunch of passwords on SSH.
 
@@ -162,7 +162,7 @@ Wazuh didn't just log each failed login separately. It linked them together and 
 **Attack (from Kali):** I put a weak password (`password123`) in the list. Hydra found it:
 
 ```
-[22][ssh] host: 192.168.2.87   login: emran   password: password123
+[22][ssh] host: 192.168.2.87   login: ****   password: password123
 1 of 1 target successfully completed, 1 valid password found
 ```
 
