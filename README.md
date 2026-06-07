@@ -1,8 +1,8 @@
 # SIEM Homelab — Cyber Attack Simulation & Log Analysis (SOC Lab)
 
-**Author:** Emran
-**Project type:** Self-built home lab / Blue Team security project
-**Stack:** Proxmox VE · Wazuh 4.14 (Indexer / Manager / Dashboard) · Kali Linux · Debian
+**Author:** Emran  
+**Project type:** Self-built home lab / Blue Team security project  
+**Stack:** Proxmox VE · Wazuh 4.14 (Indexer / Manager / Dashboard) · Kali Linux · Debian  
 **Focus:** Detection, log analysis, and attack simulation in a closed lab
 
 ---
@@ -14,6 +14,8 @@ I built a full SIEM environment from scratch. SIEM means Security Information an
 The lab runs on an old laptop. I turned it into a server with Proxmox. On that server I run three machines: the SIEM, a victim, and an attacker.
 
 My goal was not just to install a tool. I wanted to understand the full path of an attack. How an attack makes events. How those events go from the victim to the SIEM. How the SIEM turns events into alerts. And how a SOC analyst reads those alerts.
+
+![The lab running on my laptop](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20183628.png)
 
 I tested three types of detection in one attack story:
 
@@ -53,7 +55,7 @@ The whole lab runs on one Proxmox server (the old laptop). I manage it from my o
                           [Wazuh Dashboard] --shows alerts--> SOC analyst
 ```
 
-> *[Screenshot: Proxmox dashboard with the wazuh-siem container and the VM list]*
+![Proxmox dashboard with VMs](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20004136.png)
 
 ### How the parts work together
 
@@ -97,7 +99,7 @@ nodes:
 
 This made a separate certificate for the indexer, the server, the dashboard, and a special admin certificate. All were signed by the same root CA. Making them all at once is what fixed the problem from my first try.
 
-> *[Screenshot: wazuh-certs-tool.sh making all the certificates]*
+![wazuh-certs-tool.sh generating certificates](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20013307.png)
 
 ### 3.3 Installing the parts
 
@@ -107,8 +109,8 @@ I installed each part step by step from the official Wazuh repo (version 4.14.5)
 2. **Manager + Filebeat** — installed. I set up Filebeat with the server certificate. The password is in the keystore, not in plain text. I tested the connection with `filebeat test output`.
 3. **Dashboard** — installed and connected to the Indexer (for data) and the Manager API (to manage agents).
 
-> *[Screenshot: `filebeat test output` showing handshake OK and talk to server OK]*
-> *[Screenshot: Wazuh Dashboard after the first login]*
+![filebeat test output](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20012847.png)
+![Wazuh Dashboard first login](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20125619.png)
 
 ### 3.4 Installing the agent
 
@@ -120,7 +122,7 @@ I installed the Wazuh agent on the Debian victim. It registered with the Manager
 #   ID: 001, Name: debian, IP: any, Active
 ```
 
-> *[Screenshot: agent_control -l showing debian as Active]*
+![agent_control showing debian as Active](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20135535.png)
 
 ---
 
@@ -148,8 +150,8 @@ Wazuh did not just log each failed try. It linked them together and raised the l
 | 2502 | User missed the password more than one time | 10 |
 | **40111** | **Multiple authentication failures** | **10** |
 
-> *[Screenshot: Threat Hunting dashboard with about 282 failed logins and the attack spike]*
-> *[Screenshot: Events view showing the level go from 5 to 10, all from IP 192.168.2.88]*
+![Threat Hunting dashboard with 282 failed logins](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20140804.png)
+![Events view showing levels 5 to 10](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20142230.png)
 
 **How an analyst reads this:** The key alert is rule **40111**. This is the linked alert, not one single failed login. Wazuh saw many failed tries from one IP and decided it was an attack. I added `data.srcip` as a column. All the failed tries came from one IP (`192.168.2.88`). This shows it was a real attack, not a user who forgot their password. **MITRE ATT&CK: T1110 (Brute Force).**
 
@@ -176,8 +178,8 @@ sudo cat /etc/shadow                       # trying to get root (blocked)
 | 5715 | sshd: authentication success | 3 |
 | **40112** | **Multiple authentication failures followed by a success** | **12** |
 
-> *[Screenshot: Hydra output showing the cracked password (green line)]*
-> *[Screenshot: Events view with rule 40112, level 12, "failures followed by a success", IP 192.168.2.88]*
+![Hydra output with cracked password](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20144141.png)
+![Events view rule 40112 - failures followed by success](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20144418.png)
 
 **How an analyst reads this:** This is the strongest alert in the project. Rule **40112** links the failed tries with the login that worked, all from the same IP. It goes up to **level 12**. This is the clear sign of a hacked account. One good login on its own can be normal. But a good login right after many failed tries from the same IP is a problem. The "looking around" commands (`whoami`, `cat /etc/passwd`) did not make alerts. That is a good lesson: not everything an attacker does is detected by default. The try to read `/etc/shadow` did make an alert. **MITRE ATT&CK: T1110 -> T1078 (Valid Accounts).**
 
@@ -206,8 +208,8 @@ if(isset($_GET['cmd'])){
 | 554 | File added to the system | 5 |
 | 550 | Integrity checksum changed | 7 |
 
-> *[Screenshot: Events view with rule 554 "File added to the system" for /var/www/html/shell.php]*
-> *[Screenshot: the open alert showing the file path and the file content]*
+![Events view rule 554 - File added to system](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20154315.png)
+![Alert showing file path and PHP code](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20155004.png)
 
 **How an analyst reads this:** This is a different kind of detection from Phase 1 and 2. It does not read logs. FIM watches the files in real time. It makes an alert the moment a file is added or changed in a watched folder. Because I turned on `report_changes`, the alert shows the bad PHP code itself. On a web server, a new `.php` file that you did not put there is a strong sign of a web shell. A web shell lets an attacker run commands from far away. **MITRE ATT&CK: T1505.003 (Web Shell).**
 
