@@ -1,6 +1,6 @@
 # SIEM Homelab — Cyber Attack Simulation & Log Analysis (SOC Lab)
 
-**Author:** spgtcat  
+**Author:** Emran  
 **Project type:** Self-built home lab / Blue Team security project  
 **Stack:** Proxmox VE · Wazuh 4.14 (Indexer / Manager / Dashboard) · Kali Linux · Debian  
 **Focus:** Detection, log analysis, and attack simulation in a closed lab
@@ -13,7 +13,6 @@ I built a SIEM from scratch on an old laptop. SIEM stands for Security Informati
 
 I turned the laptop into a server with Proxmox and ran three machines on it: the SIEM, a victim (Debian), and an attacker (Kali Linux).
 
-I didn't just want to install a tool, i also wanted to see the full picture. Like how an attack creates events, how those events travel to the SIEM, how the SIEM turns them into alerts, and how you read those alerts.
 
 > **Note:** For this project i was using my real name, in this documentation my name is intentionally not disclosed for operational security reasons.
 
