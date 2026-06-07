@@ -9,40 +9,40 @@
 
 ## 1. Summary
 
-I built a full SIEM environment from scratch. SIEM means Security Information and Event Management — a system that collects logs and detects attacks. I used it to simulate a real attack and detect it.
+I built a SIEM from scratch on an old laptop. SIEM stands for Security Information and Event Management — basically a system that collects logs and spots attacks.
 
-The lab runs on an old laptop. I turned it into a server with Proxmox. On that server I run three machines: the SIEM, a victim, and an attacker.
+I turned the laptop into a server with Proxmox and ran three machines on it: the SIEM, a victim, and an attacker.
 
-My goal was not just to install a tool. I wanted to understand the full path of an attack. How an attack makes events. How those events go from the victim to the SIEM. How the SIEM turns events into alerts. And how a SOC analyst reads those alerts.
+I didn't just want to install a tool. I wanted to see the full picture: how an attack creates events, how those events travel to the SIEM, how the SIEM turns them into alerts, and how you read those alerts.
 
 ![The lab running on my laptop](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20183628.png)
 
-I tested three types of detection in one attack story:
+I tested three types of detection:
 
 1. **Log-based detection** — SSH brute force
-2. **Correlation-based detection** — a login that works after many failed tries (a hacked account)
+2. **Correlation-based detection** — a successful login after many failed ones (= hacked account)
 3. **File-based detection** — a web shell dropped on a web server
 
-> **Honest note:** The first build did not work. I got stuck on the security setup of the Wazuh Indexer. The problem was the TLS certificates. Instead of forcing a fix, I deleted everything and built it again the clean way. I wrote this part down on purpose. Finding the problem and fixing it the right way is an important security skill.
+> **Honest note:** My first build didn't work. I messed up the TLS certificates for the Wazuh Indexer. Instead of hacking around it, I deleted everything and started over the right way. I wrote this down on purpose — knowing when to start fresh is a real skill.
 
 ---
 
 ## 2. Lab Architecture
 
-The whole lab runs on one Proxmox server (the old laptop). I manage it from my own PC through the browser.
+Everything runs on one Proxmox server (the old laptop). I access it from my PC through the browser.
 
 | Role | Hostname | IP | What it does |
 |------|----------|-----|--------------|
 | **SIEM server** | `wazuh-siem` | `192.168.2.90` | Wazuh Indexer + Manager + Dashboard |
-| **Victim** | `debian` | `192.168.2.87` | The monitored machine: Wazuh agent, SSH, Apache/PHP |
-| **Attacker** | `kali` | `192.168.2.88` | Kali Linux — I run all attacks from here |
+| **Victim** | `debian` | `192.168.2.87` | The machine being monitored: Wazuh agent, SSH, Apache/PHP |
+| **Attacker** | `kali` | `192.168.2.88` | Kali Linux — all attacks come from here |
 
-**How the data moves:**
+**How the data flows:**
 
 ```
 [Kali attacker] --attack--> [Debian victim]
                                    |
-                          (Wazuh agent collects events)
+                          (Wazuh agent picks up events)
                                    |  ports 1514/1515
                                    v
                           [Wazuh Manager] --checks rules--> alerts.json
@@ -59,18 +59,18 @@ The whole lab runs on one Proxmox server (the old laptop). I manage it from my o
 
 ### How the parts work together
 
-- The **agent** on the victim only collects events. It does not have the detection rules.
-- The **Manager** has the rules. This is where events become alerts.
-- **Filebeat** sends the alerts to the Indexer over TLS (a secure connection).
+- The **agent** on the victim just collects events. It doesn't decide what's an attack.
+- The **Manager** has the rules. It decides what's suspicious.
+- **Filebeat** sends the alerts to the Indexer over a secure connection (TLS).
 - The **Indexer** stores everything. The **Dashboard** shows it.
 
 ---
 
 ## 3. How I Built It
 
-### 3.1 Setting up the host (an LXC problem)
+### 3.1 Setting up the host
 
-The SIEM runs inside an LXC container. The Indexer needs a kernel setting called `vm.max_map_count`. In an LXC container you must set this on the Proxmox host, not inside the container:
+The SIEM runs in an LXC container on Proxmox. The Indexer needs a specific setting (`vm.max_map_count`) to work. Because it's a container, I had to set this on the Proxmox host itself:
 
 ```bash
 # On the Proxmox host
@@ -78,11 +78,11 @@ sysctl -w vm.max_map_count=262144
 echo "vm.max_map_count=262144" >> /etc/sysctl.conf
 ```
 
-Without this, the Indexer does not start. I checked the value inside the container too, to be sure it worked.
+Without this, the Indexer just doesn't start.
 
-### 3.2 Certificates (the clean way)
+### 3.2 Certificates
 
-This was the most important lesson. Wazuh uses TLS certificates to keep the connection between its parts safe. I made all certificates at once with the official tool `wazuh-certs-tool.sh`. I used one config file with all three machines:
+This was the hardest part. Wazuh uses TLS certificates so all the parts communicate securely. I used the official tool `wazuh-certs-tool.sh` to generate all certificates at once:
 
 ```yaml
 nodes:
@@ -97,16 +97,16 @@ nodes:
       ip: "192.168.2.90"
 ```
 
-This made a separate certificate for the indexer, the server, the dashboard, and a special admin certificate. All were signed by the same root CA. Making them all at once is what fixed the problem from my first try.
+This created a certificate for the indexer, the server, the dashboard, and a separate admin certificate. All signed by the same root CA. Generating them all at once is what fixed the problem from my first try.
 
 ![wazuh-certs-tool.sh generating certificates](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20013307.png)
 
 ### 3.3 Installing the parts
 
-I installed each part step by step from the official Wazuh repo (version 4.14.5):
+I installed each part from the official Wazuh repo (version 4.14.5):
 
-1. **Indexer** — installed, added the certificates, started the security with `indexer-security-init.sh`. The cluster health was `green`.
-2. **Manager + Filebeat** — installed. I set up Filebeat with the server certificate. The password is in the keystore, not in plain text. I tested the connection with `filebeat test output`.
+1. **Indexer** — installed it, added the certificates, ran `indexer-security-init.sh`. Cluster health came back `green`.
+2. **Manager + Filebeat** — installed both. Set up Filebeat with the server certificate. Password goes in the keystore, not in plain text. Tested the connection with `filebeat test output`.
 3. **Dashboard** — installed and connected to the Indexer (for data) and the Manager API (to manage agents).
 
 ![filebeat test output](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20012847.png)
@@ -114,7 +114,7 @@ I installed each part step by step from the official Wazuh repo (version 4.14.5)
 
 ### 3.4 Installing the agent
 
-I installed the Wazuh agent on the Debian victim. It registered with the Manager by itself. The status was `Active`:
+I installed the Wazuh agent on the Debian victim. It registered with the Manager automatically. Status: `Active`.
 
 ```bash
 # On the Manager
@@ -128,7 +128,7 @@ I installed the Wazuh agent on the Debian victim. It registered with the Manager
 
 ## 4. Attacks and Detections
 
-I ran all attacks from the Kali machine (`192.168.2.88`) against the Debian victim (`192.168.2.87`). This is my own closed lab. I did everything on machines I own.
+All attacks go from Kali (`192.168.2.88`) to the Debian victim (`192.168.2.87`). This is my own closed lab — everything runs on machines I own.
 
 ### Phase 1 — SSH Brute Force (log-based)
 
@@ -136,11 +136,11 @@ I ran all attacks from the Kali machine (`192.168.2.88`) against the Debian vict
 ```bash
 hydra -l emran -P /tmp/passwords.txt ssh://192.168.2.87 -t 4 -V
 ```
-Hydra tried many passwords on the SSH service.
+Hydra tries a bunch of passwords on SSH.
 
 **What Wazuh saw:**
 
-Wazuh did not just log each failed try. It linked them together and raised the level. Single failed logins (level 5) became a higher alert:
+Wazuh didn't just log each failed login separately. It linked them together and raised the alert level:
 
 | Rule ID | Description | Level |
 |---------|-------------|-------|
@@ -153,18 +153,18 @@ Wazuh did not just log each failed try. It linked them together and raised the l
 ![Threat Hunting dashboard with 282 failed logins](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20140804.png)
 ![Events view showing levels 5 to 10](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20142230.png)
 
-**How an analyst reads this:** The key alert is rule **40111**. This is the linked alert, not one single failed login. Wazuh saw many failed tries from one IP and decided it was an attack. I added `data.srcip` as a column. All the failed tries came from one IP (`192.168.2.88`). This shows it was a real attack, not a user who forgot their password. **MITRE ATT&CK: T1110 (Brute Force).**
+**What this means:** Rule **40111** is the important one. Wazuh saw many failed logins from one IP and flagged it as an attack. I added `data.srcip` as a column and saw every failed attempt came from `192.168.2.88`. That's not someone forgetting their password — that's a brute force attack. **MITRE ATT&CK: T1110 (Brute Force).**
 
 ### Phase 2 — Successful Break-In (correlation-based)
 
-**Attack (from Kali):** I added a weak password (`password123`) to the list. It is in the rockyou wordlist at line 1384. Hydra then cracked the account:
+**Attack (from Kali):** I put a weak password (`password123`) in the list. Hydra found it:
 
 ```
 [22][ssh] host: 192.168.2.87   login: emran   password: password123
 1 of 1 target successfully completed, 1 valid password found
 ```
 
-After I got in, I logged in as the hacked account and did normal attacker actions:
+After getting in, I did what an attacker would do:
 
 ```bash
 whoami; id; uname -a; cat /etc/passwd     # looking around
@@ -181,17 +181,17 @@ sudo cat /etc/shadow                       # trying to get root (blocked)
 ![Hydra output with cracked password](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20144141.png)
 ![Events view rule 40112 - failures followed by success](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20144418.png)
 
-**How an analyst reads this:** This is the strongest alert in the project. Rule **40112** links the failed tries with the login that worked, all from the same IP. It goes up to **level 12**. This is the clear sign of a hacked account. One good login on its own can be normal. But a good login right after many failed tries from the same IP is a problem. The "looking around" commands (`whoami`, `cat /etc/passwd`) did not make alerts. That is a good lesson: not everything an attacker does is detected by default. The try to read `/etc/shadow` did make an alert. **MITRE ATT&CK: T1110 -> T1078 (Valid Accounts).**
+**What this means:** Rule **40112** is the strongest alert in the whole project. It saw many failed logins followed by a successful one, all from the same IP. That's level **12** — a clear sign of a compromised account. A normal login is fine. A login right after 200 failed tries from the same IP? That's bad. Also interesting: the commands I ran after logging in (`whoami`, `cat /etc/passwd`) didn't trigger any alerts. Not everything gets detected by default. The `sudo cat /etc/shadow` attempt did get caught though. **MITRE ATT&CK: T1110 → T1078 (Valid Accounts).**
 
 ### Phase 3 — Web Shell (file-based, real-time)
 
-To show a different kind of detection, I installed Apache + PHP on the victim. Then I turned on real-time File Integrity Monitoring (FIM) on the web folder:
+For this one I installed Apache + PHP on the victim and turned on real-time File Integrity Monitoring (FIM) on the web folder:
 
 ```xml
 <directories check_all="yes" realtime="yes" report_changes="yes">/var/www/html</directories>
 ```
 
-**Attack:** I put a PHP web shell in the web folder:
+**Attack:** I dropped a PHP web shell in the web folder:
 
 ```php
 <?php
@@ -211,13 +211,13 @@ if(isset($_GET['cmd'])){
 ![Events view rule 554 - File added to system](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20154315.png)
 ![Alert showing file path and PHP code](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20155004.png)
 
-**How an analyst reads this:** This is a different kind of detection from Phase 1 and 2. It does not read logs. FIM watches the files in real time. It makes an alert the moment a file is added or changed in a watched folder. Because I turned on `report_changes`, the alert shows the bad PHP code itself. On a web server, a new `.php` file that you did not put there is a strong sign of a web shell. A web shell lets an attacker run commands from far away. **MITRE ATT&CK: T1505.003 (Web Shell).**
+**What this means:** This detection works differently from Phase 1 and 2. FIM watches files in real time. The moment a new file appears in a watched folder, it makes an alert. Because I turned on `report_changes`, the alert even shows the actual PHP code. A random `.php` file showing up on a web server? That's a web shell — it lets an attacker run commands remotely. **MITRE ATT&CK: T1505.003 (Web Shell).**
 
 ---
 
 ## 5. The Full Attack Chain
 
-All three phases together make one real attack story. This is how a real break-in happens. I can follow all of it on one timeline by the source IP:
+All three phases together tell one story. This is how a real break-in goes:
 
 ```
 1. Brute force        (T1110)        -> many failed SSH logins        [rule 40111, level 10]
@@ -231,39 +231,39 @@ All three phases together make one real attack story. This is how a real break-i
 
 ## 6. Problems and Lessons
 
-**The certificate problem.** My first build failed many times. I kept getting the error `"... is not an admin user"` when I tried to start the Indexer security. The connection worked, but it would not give me admin rights. The reason: I used the node certificate as the admin certificate. OpenSearch has a hard rule. A certificate that is a node can never be an admin. This is on purpose. It stops a hacked node from taking over the cluster. You cannot fix this by editing the config. You need a separate admin certificate.
+**The certificate problem.** My first build kept failing. I got the error `"... is not an admin user"` when trying to start the Indexer security. Turns out I was using a node certificate as the admin certificate. OpenSearch doesn't allow that — a node certificate can never be an admin. That's a security feature: it stops a hacked node from taking over the whole cluster.
 
-**The fix.** I did not keep patching the broken setup. I deleted everything and built it again the clean way. I made all certificates at once with the official tool. The clean build worked on the first try — `Done with success` — with no error.
+**How I fixed it.** I didn't try to patch the broken setup. I just deleted everything and started fresh with the official tool. Clean build worked first try — `Done with success`.
 
 **What I learned:**
 
-- A SIEM is only as safe as its setup. It is better to understand *why* a security control blocks you than to force your way past it.
-- Detection has layers: raw events -> linked alerts -> higher level. The linked alerts (40111, 40112) are the smart part.
-- Not everything is detected by default. Knowing the gaps is a SOC skill too.
-- A clean rebuild is often faster and safer than fixing a broken setup.
+- It's better to understand *why* something blocks you than to force past it.
+- Alerts have layers: single events → linked alerts → higher priority. The linked alerts (40111, 40112) are where the real detection happens.
+- Not everything gets detected by default. Knowing the blind spots matters too.
+- Starting over is sometimes faster and cleaner than fixing a mess.
 
 ---
 
 ## 7. What I Could Add Next
 
-- **Custom rules** — a rule in `local_rules.xml` that knows web-shell code (`system(`, `$_GET`, `eval(`) and makes it critical (level 13+), mapped to MITRE T1505.003. This is detection engineering: tuning the SIEM to the threat.
-- **auditd** — logs every command, so "looking around" is also detected.
-- **Active Response** — block an attacker's IP by itself with `firewall-drop`.
-- **Sysmon + a Windows machine** — more detailed logs and more attack types.
-- **Change default passwords** — rotate the default `admin` password with the Wazuh passwords tool. The lab is on a closed network with no outside access.
+- **Custom rules** — make the SIEM recognize web shell code (`system(`, `$_GET`, `eval(`) and flag it as critical.
+- **auditd** — log every command so the "looking around" phase also gets detected.
+- **Active Response** — automatically block an attacker's IP.
+- **Sysmon + a Windows machine** — more detailed logs and different attack types.
+- **Change default passwords** — rotate the default `admin` password. The lab is on a closed network so it wasn't urgent, but it's good practice.
 
 ---
 
 ## 8. Skills I Showed
 
-- Building and setting up a full SIEM stack (Wazuh Indexer, Manager, Dashboard) from scratch
-- Working with TLS certificates to secure the connection between parts
-- Linux server admin (Debian, systemd services, packages)
-- Installing agents and monitoring a machine
-- Running attacks with real tools (Hydra, Kali Linux)
-- Reading logs, sorting alerts, and understanding linked alerts
-- Mapping detections to the MITRE ATT&CK framework
-- Finding problems and fixing them the clean way
+- Built a full SIEM stack (Wazuh Indexer, Manager, Dashboard) from scratch
+- Worked with TLS certificates to secure connections
+- Linux server admin (Debian, systemd, packages)
+- Installed agents and monitored a machine
+- Ran attacks with real tools (Hydra, Kali Linux)
+- Read logs, analyzed alerts, and understood how detection rules link events together
+- Mapped detections to MITRE ATT&CK
+- Troubleshot problems and fixed them the right way
 
 ---
 
