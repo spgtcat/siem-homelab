@@ -11,9 +11,9 @@
 
 I built a SIEM from scratch on an old laptop. SIEM stands for Security Information and Event Management — basically a system that collects logs and spots attacks.
 
-I turned the laptop into a server with Proxmox and ran three machines on it: the SIEM, a victim, and an attacker.
+I turned the laptop into a server with Proxmox and ran three machines on it: the SIEM, a victim (Debian), and an attacker (Kali Linux).
 
-I didn't just want to install a tool. I wanted to see the full picture: how an attack creates events, how those events travel to the SIEM, how the SIEM turns them into alerts, and how you read those alerts.
+I didn't just want to install a tool, i also wanted to see the full picture. Like how an attack creates events, how those events travel to the SIEM, how the SIEM turns them into alerts, and how you read those alerts.
 
 ![The lab running on my laptop](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20183628.png)
 
@@ -181,11 +181,11 @@ sudo cat /etc/shadow                       # trying to get root (blocked)
 ![Hydra output with cracked password](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20144141.png)
 ![Events view rule 40112 - failures followed by success](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20144418.png)
 
-**What this means:** Rule **40112** is the strongest alert in the whole project. It saw many failed logins followed by a successful one, all from the same IP. That's level **12** — a clear sign of a compromised account. A normal login is fine. A login right after 200 failed tries from the same IP? That's bad. Also interesting: the commands I ran after logging in (`whoami`, `cat /etc/passwd`) didn't trigger any alerts. Not everything gets detected by default. The `sudo cat /etc/shadow` attempt did get caught though. **MITRE ATT&CK: T1110 → T1078 (Valid Accounts).**
+**What this means:** Rule **40112** is the strongest alert in the whole project. It saw many failed logins followed by a successful one, all from the same IP. That's level **12** — a sign of a compromised account. A normal login is not suspicious but a login right after 200 failed tries from the same IP is. Also the commands I ran after logging in (`whoami`, `cat /etc/passwd`) didn't trigger any alerts. Not everything gets detected by default. The `sudo cat /etc/shadow` attempt did get caught though. **MITRE ATT&CK: T1110 → T1078 (Valid Accounts).**
 
-### Phase 3 — Web Shell (file-based, real-time)
+### Phase 3 — Web Shell
 
-For this one I installed Apache + PHP on the victim and turned on real-time File Integrity Monitoring (FIM) on the web folder:
+For this one I installed Apache + PHP on the victim and turned on real time File Integrity Monitoring on the web folder:
 
 ```xml
 <directories check_all="yes" realtime="yes" report_changes="yes">/var/www/html</directories>
@@ -211,7 +211,7 @@ if(isset($_GET['cmd'])){
 ![Events view rule 554 - File added to system](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20154315.png)
 ![Alert showing file path and PHP code](https://raw.githubusercontent.com/spgtcat/siem-homelab/main/Screenshot%202026-06-07%20155004.png)
 
-**What this means:** This detection works differently from Phase 1 and 2. FIM watches files in real time. The moment a new file appears in a watched folder, it makes an alert. Because I turned on `report_changes`, the alert even shows the actual PHP code. A random `.php` file showing up on a web server? That's a web shell — it lets an attacker run commands remotely. **MITRE ATT&CK: T1505.003 (Web Shell).**
+**What this means:** This detection works differently from Phase 1 and 2. FIM watches files in real time. The moment a new file appears in a watched folder, it makes an alert. Because I turned on `report_changes`, the alert even shows the actual PHP code. A random `.php` file showing up on a web server is a webshell, it lets an attacker run commands remotely. **MITRE ATT&CK: T1505.003 (Web Shell).**
 
 ---
 
@@ -231,7 +231,7 @@ All three phases together tell one story. This is how a real break-in goes:
 
 ## 6. Problems and Lessons
 
-**The certificate problem.** My first build kept failing. I got the error `"... is not an admin user"` when trying to start the Indexer security. Turns out I was using a node certificate as the admin certificate. OpenSearch doesn't allow that — a node certificate can never be an admin. That's a security feature: it stops a hacked node from taking over the whole cluster.
+**The certificate problem.** My first build kept failing. I got the error `"... is not an admin user"` when trying to start the Indexer security. Turns out I was using a node certificate as the admin certificate. OpenSearch doesn't allow that — a node certificate can never be an admin. That's a security feature.
 
 **How I fixed it.** I didn't try to patch the broken setup. I just deleted everything and started fresh with the official tool. Clean build worked first try — `Done with success`.
 
