@@ -1,4 +1,4 @@
-# SIEM Homelab — Cyber Attack Simulation & Log Analysis (SOC Lab)
+# SIEM Homelab Cyber Attack Simulation & Log Analysis (SOC Lab)
 
 **Author:** Emran  
 **Project type:** Self-built home lab / Blue Team security project  
