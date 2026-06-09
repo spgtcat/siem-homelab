@@ -2,8 +2,8 @@
 
 **Author:** Emran  
 **Project type:** Self built home lab / Blue Team security project  
-**Stack:** Proxmox VE · Wazuh 4.14 (Indexer / Manager / Dashboard) · Kali Linux · Debian  
-**Focus:** Detection, log analysis, and attack simulation in a closed lab
+**Stack:** Proxmox VE and Wazuh 4.14 (Indexer/Manager/Dashboard) Kali Linux and Debian  
+**Focus:** Detection, log analysis, and attack simulation in a lab
 
 ---
 
@@ -19,9 +19,9 @@ I turned the laptop into a server with Proxmox and ran three machines on it: the
 
 I tested three types of detection:
 
-1. **Log-based detection** with SSH brute force
-2. **Correlation-based detection** where a successful login follows many failed ones (= hacked account)
-3. **File-based detection** where a web shell gets dropped on a web server
+1. **Log based detection** with SSH brute force
+2. **Correlation based detection** where a successful login follows many failed ones (= hacked account)
+3. **File based detection** where a web shell gets dropped on a web server
 
 > **Honest note:** My first build didn't work. I messed up the TLS certificates for the Wazuh Indexer. Instead of hacking around it, I deleted everything and started over the right way. I wrote this down on purpose because knowing when to start fresh is a real skill.
 
